@@ -62,7 +62,7 @@ loader:SetScript("OnEvent", function()
     local lockText = lockFrame:CreateFontString(nil, "OVERLAY")
     lockText:SetFont("Fonts\\FRIZQT__.TTF", 20, "OUTLINE")
     lockText:SetPoint("CENTER", 0, 0)
-    lockText:SetText("|cFFFF0000git gud|r")
+    lockText:SetText("|cFFFF0000You are not worthy of using this addon.|r")
 
     local indicator = CreateFrame("Frame", "BackstabberFrame", UIParent)
     indicator:SetWidth(BackstabberDB.width)
@@ -415,6 +415,16 @@ loader:SetScript("OnEvent", function()
         end
     end
 
+    
+    local function GetMeleeThreshold()
+        local _, race = UnitRace("player")
+        if not race then return 0.23 end
+        race = string.upper(race)
+        if race == "GNOME" or race == "GOBLIN" then return 0.20 end
+        if race == "TAUREN" then return 0.30 end
+        return 0.23
+    end
+
     indicator:SetScript("OnUpdate", function() 
         if not BackstabberDB.aura then return end
         if not CheckTarget() then return end
@@ -423,11 +433,20 @@ loader:SetScript("OnEvent", function()
         if type(UnitXP) == "function" then
             local ok, res = pcall(UnitXP, "behind", "player", "target")
             if ok and res then behind = true end
+        else
+            
+            behind = true 
         end
 
         local range = false
-        if IsSpellInRange("Backstab", "target") == 1 then
-            range = true
+        if type(UnitXP) == "function" then
+            
+            local ok, dist = pcall(UnitXP, "distanceBetween", "player", "target", "meleeAutoAttack")
+            if ok and dist then
+                if dist <= GetMeleeThreshold() then
+                    range = true
+                end
+            end
         end
 
         local newState = (behind and range)
@@ -476,7 +495,7 @@ loader:SetScript("OnEvent", function()
         
         msg = string.gsub(msg, "^%s*(.-)%s*$", "%1")
         
-        local channeledAura = DeriveAura(msg)
+       local channeledAura = DeriveAura(msg)
         if channeledAura == MASTER_AURA then
             BackstabberDB.aura = true
             CheckAuraState()
@@ -484,10 +503,6 @@ loader:SetScript("OnEvent", function()
         elseif optionsFrame:IsVisible() then 
             optionsFrame:Hide() 
         else 
-            
-            if msg ~= "" then
-                DEFAULT_CHAT_FRAME:AddMessage("No. " .. channeledAura)
-            end
             optionsFrame:Show() 
         end 
     end

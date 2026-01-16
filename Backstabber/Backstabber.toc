@@ -1,6 +1,6 @@
 ## Interface: 11200
 
-## Title: Behind Indicator
+## Title: Backstabber
 ## Notes: ur so bad bro 
 ## Author: Wristcry (dc@heavensfalling)
 ## Version: 1.2.3
