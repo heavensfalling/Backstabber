@@ -14,7 +14,7 @@ This addon relies on SuperWoW and the UnitXP module to function correctly. The s
 
 ⚙️  You can access the settings menu via the Minimap Button or by using slash commands:
 
-/bs - Toggles the options menu.
+/bsb - Toggles the options menu.
 
 /backstabber - Toggles the options menu.
 
