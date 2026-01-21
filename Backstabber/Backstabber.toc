@@ -3,7 +3,7 @@
 ## Title: Backstabber
 ## Notes: ur so bad bro 
 ## Author: Wristcry (dc@heavensfalling)
-## Version: 1.2.3
+## Version: 1.2.5
 ## SavedVariables: BackstabberDB
 
 Backstabber.lua
