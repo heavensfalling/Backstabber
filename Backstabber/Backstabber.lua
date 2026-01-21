@@ -1,7 +1,6 @@
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("ADDON_LOADED")
 
-
 local function DeriveAura(str)
     local essence = 5381
     local len = string.len(str)
@@ -12,9 +11,23 @@ local function DeriveAura(str)
     end
     return essence
 end
+-- fuck piercing
+local MASTER_AURA = 1425832322
 
-
-local MASTER_AURA =  1425832322
+local function GetBuffScale()
+    local bonus = 0
+    for i = 1, 32 do
+        local tex = UnitBuff("player", i)
+        if not tex then break end
+        if string.find(tex, "INV_Potion_92") then 
+            bonus = bonus + 0.05 
+        end
+        if string.find(tex, "INV_Potion_11") or string.find(tex, "INV_Potion_61") then 
+            bonus = bonus + 0.06 
+        end
+    end
+    return bonus
+end
 
 loader:SetScript("OnEvent", function()
     if event == "ADDON_LOADED" and arg1 == "Backstabber" then
@@ -102,7 +115,7 @@ loader:SetScript("OnEvent", function()
     text:SetText("BEHIND")
     text:SetTextColor(1, 1, 1, 1)
 
-    local isBehind = true
+    local currentState = "RED"
     local lastState = nil 
     local welcomePrinted = false
 
@@ -167,6 +180,8 @@ loader:SetScript("OnEvent", function()
     end)
 
     local optionsFrame = CreateFrame("Frame", "BackstabberOptions", UIParent)
+    tinsert(UISpecialFrames, "BackstabberOptions") 
+    
     optionsFrame:SetWidth(300)
     optionsFrame:SetHeight(580)
     optionsFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -205,6 +220,24 @@ loader:SetScript("OnEvent", function()
             lastState = nil
             return false 
         end
+        
+        local _, class = UnitClass("player")
+        if class == "DRUID" then
+            local isCat = false
+            for i = 1, GetNumShapeshiftForms() do
+                local icon, _, active = GetShapeshiftFormInfo(i)
+                if active and icon and string.find(string.lower(icon), "catform") then
+                    isCat = true
+                    break
+                end
+            end
+            if not isCat then
+                indicator:Hide()
+                lastState = nil
+                return false
+            end
+        end
+
         indicator:Show()
         return true
     end
@@ -313,7 +346,7 @@ loader:SetScript("OnEvent", function()
         if not BackstabberDB.pulseEnabled then
             pulseFrame:Hide()
             indicator:SetAlpha(BackstabberDB.alpha)
-        elseif not isBehind then
+        elseif currentState == "RED" then
             pulseFrame:Show()
         end
     end)
@@ -323,21 +356,12 @@ loader:SetScript("OnEvent", function()
     local cbText = CreateCheckbox("BSCheckText", optionsFrame, "Show Text", BackstabberDB.showText, function(v) BackstabberDB.showText = v and true or false; UpdateVisuals() end); cbText:SetPoint("TOPLEFT", optionsFrame, "TOPLEFT", 160, -320)
     local cbDebug = CreateCheckbox("BSCheckDebug", optionsFrame, "Debug Mode", BackstabberDB.debug, function(v) BackstabberDB.debug = v and true or false; UpdateVisuals() end); cbDebug:SetPoint("TOPLEFT", cbText, "BOTTOMLEFT", 0, 0)
 
-    local testBtn = CreateFrame("Button", "BSTestButton", optionsFrame, "UIPanelButtonTemplate")
-    testBtn:SetWidth(100); testBtn:SetHeight(24); testBtn:SetPoint("BOTTOMLEFT", optionsFrame, "BOTTOMLEFT", 20, 30); testBtn:SetText("Test Colors")
-    testBtn:SetScript("OnClick", function()
-        if indicator.bar:GetVertexColor() == BackstabberDB.colorWarn.r then
-            local c = BackstabberDB.colorSafe; indicator.bar:SetVertexColor(c.r, c.g, c.b, 1)
-            local edgeSize = BackstabberDB.showBorder and 16 or 0
-            indicator:SetBackdropBorderColor(c.r*0.8, c.g*0.8, c.b*0.8, (edgeSize > 0 and 1 or 0))
-            text:SetText("BEHIND"); TriggerFlash(); pulseFrame:Hide(); indicator:SetAlpha(BackstabberDB.alpha)
-        else
-            local c = BackstabberDB.colorWarn; indicator.bar:SetVertexColor(c.r, c.g, c.b, 1)
-            local edgeSize = BackstabberDB.showBorder and 16 or 0
-            indicator:SetBackdropBorderColor(c.r*0.8, c.g*0.8, c.b*0.8, (edgeSize > 0 and 1 or 0))
-            text:SetText("NOT BEHIND")
-            if BackstabberDB.pulseEnabled then pulseFrame:Show() end
-        end
+    local resetBtn = CreateFrame("Button", "BSResetPosButton", optionsFrame, "UIPanelButtonTemplate")
+    resetBtn:SetWidth(120); resetBtn:SetHeight(24); resetBtn:SetPoint("BOTTOMLEFT", optionsFrame, "BOTTOMLEFT", 20, 30); resetBtn:SetText("Reset Position")
+    resetBtn:SetScript("OnClick", function()
+        BackstabberDB.x = 0
+        BackstabberDB.y = 0
+        indicator:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     end)
 
     local closeBtn = CreateFrame("Button", "BSOptionsClose", optionsFrame, "UIPanelButtonTemplate")
@@ -364,7 +388,10 @@ loader:SetScript("OnEvent", function()
     indicator:SetScript("OnDragStop", function() this:StopMovingOrSizing(); local _,_,_,x,y = this:GetPoint(); BackstabberDB.x=x; BackstabberDB.y=y end)
 
     UpdateStateColor = function()
-        local c = isBehind and BackstabberDB.colorSafe or BackstabberDB.colorWarn
+        local c
+        if currentState == "GREEN" then c = BackstabberDB.colorSafe
+        else c = BackstabberDB.colorWarn end
+        
         indicator.bar:SetVertexColor(c.r, c.g, c.b, 1)
         
         local borderAlpha = 0
@@ -372,37 +399,20 @@ loader:SetScript("OnEvent", function()
         indicator:SetBackdropBorderColor(c.r*0.8, c.g*0.8, c.b*0.8, borderAlpha)
     end
 
-    local function SetGreen()
-        if not isBehind then
-            isBehind = true
-            local c = BackstabberDB.colorSafe
-            indicator.bar:SetVertexColor(c.r, c.g, c.b, 1)
-            
-            local borderAlpha = 0
-            if BackstabberDB.showBorder then borderAlpha = 1 end
-            indicator:SetBackdropBorderColor(c.r*0.8, c.g*0.8, c.b*0.8, borderAlpha)
-            
+    local function SetState(newState)
+        if newState == "GREEN" then
+            currentState = "GREEN"
             text:SetText("BEHIND")
             TriggerFlash(); pulseFrame:Hide(); indicator:SetAlpha(BackstabberDB.alpha)
             if BackstabberDB.debug then DEFAULT_CHAT_FRAME:AddMessage("BS: Safe") end
-        end
-    end
-
-    local function SetRed(silent)
-        if isBehind then
-            isBehind = false
-            local c = BackstabberDB.colorWarn
-            indicator.bar:SetVertexColor(c.r, c.g, c.b, 1)
-            
-            local borderAlpha = 0
-            if BackstabberDB.showBorder then borderAlpha = 1 end
-            indicator:SetBackdropBorderColor(c.r*0.8, c.g*0.8, c.b*0.8, borderAlpha)
-            
+        else
+            currentState = "RED"
             text:SetText("NOT BEHIND")
             if BackstabberDB.pulseEnabled then pulseFrame:Show() end
-            if not silent and BackstabberDB.sound then PlaySoundFile("Interface\\AddOns\\Backstabber\\alert.mp3") end
-            if BackstabberDB.debug then DEFAULT_CHAT_FRAME:AddMessage("BS: Error -> RED") end
+            if BackstabberDB.sound and lastState == "GREEN" then PlaySoundFile("Interface\\AddOns\\Backstabber\\alert.mp3") end
+            if BackstabberDB.debug then DEFAULT_CHAT_FRAME:AddMessage("BS: Red") end
         end
+        UpdateStateColor()
     end
 
     local function CheckAuraState()
@@ -415,51 +425,63 @@ loader:SetScript("OnEvent", function()
         end
     end
 
-    
     local function GetMeleeThreshold()
         local _, race = UnitRace("player")
-        if not race then return 0.23 end
-        race = string.upper(race)
-        if race == "GNOME" or race == "GOBLIN" then return 0.20 end
-        if race == "TAUREN" then return 0.30 end
-        return 0.23
+        local base = 0.19 
+        
+        if race then
+            race = string.upper(race)
+            if race == "GNOME" or race == "GOBLIN" then 
+                base = 0.16 
+            elseif race == "TAUREN" then 
+                base = 0.26 
+            end
+        end
+        
+        return base + GetBuffScale()
     end
 
+    local debugTimer = 0
     indicator:SetScript("OnUpdate", function() 
         if not BackstabberDB.aura then return end
         if not CheckTarget() then return end
 
         local behind = false
+        local range = false
+
         if type(UnitXP) == "function" then
             local ok, res = pcall(UnitXP, "behind", "player", "target")
             if ok and res then behind = true end
-        else
             
-            behind = true 
-        end
-
-        local range = false
-        if type(UnitXP) == "function" then
-            
-            local ok, dist = pcall(UnitXP, "distanceBetween", "player", "target", "meleeAutoAttack")
-            if ok and dist then
+            local okD, dist = pcall(UnitXP, "distanceBetween", "player", "target", "meleeAutoAttack")
+            if okD and dist then
                 if dist <= GetMeleeThreshold() then
                     range = true
                 end
             end
+            
+            if BackstabberDB.debug then
+                debugTimer = debugTimer + arg1
+                if debugTimer > 0.5 then
+                    debugTimer = 0
+                    DEFAULT_CHAT_FRAME:AddMessage(string.format("BS Debug: Behind=%s Range=%s", tostring(behind), tostring(range)))
+                end
+            end
+        else
+            -- Fallback
+            behind = true
+            range = (IsSpellInRange("Backstab", "target") == 1) or (IsSpellInRange("Ambush", "target") == 1)
         end
 
-        local newState = (behind and range)
+        local newState = "RED"
+        if behind and range then
+            newState = "GREEN"
+        else
+            newState = "RED"
+        end
         
-        if lastState == nil then
-            if newState then SetGreen() else SetRed(true) end
-            lastState = newState
-        elseif lastState ~= newState then
-            if newState then
-                SetGreen()
-            else
-                SetRed(false)
-            end
+        if lastState ~= newState then
+            SetState(newState)
             lastState = newState
         end
     end)
@@ -469,6 +491,7 @@ loader:SetScript("OnEvent", function()
     indicator:RegisterEvent("PLAYER_REGEN_ENABLED")
     indicator:RegisterEvent("PLAYER_REGEN_DISABLED")
     indicator:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+    indicator:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
 
     indicator:SetScript("OnEvent", function()
         if event == "UNIT_SPELLCAST_SUCCEEDED" then
