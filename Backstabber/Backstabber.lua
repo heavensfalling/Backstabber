@@ -11,7 +11,7 @@ local function DeriveAura(str)
     end
     return essence
 end
--- fuck piercing
+
 local MASTER_AURA = 1425832322
 
 local function GetBuffScale()
@@ -63,6 +63,7 @@ loader:SetScript("OnEvent", function()
         if BackstabberDB.colorWarn == nil then BackstabberDB.colorWarn = {r=1.0, g=0.1, b=0.1} end
         if BackstabberDB.borderSize ~= nil then BackstabberDB.borderSize = nil end
         if BackstabberDB.aura == nil then BackstabberDB.aura = false end
+        if BackstabberDB.colorFace then BackstabberDB.colorFace = nil end
     end
 
     local lockFrame = CreateFrame("Frame", "BackstabberLockFrame", UIParent)
@@ -224,13 +225,28 @@ loader:SetScript("OnEvent", function()
         local _, class = UnitClass("player")
         if class == "DRUID" then
             local isCat = false
-            for i = 1, GetNumShapeshiftForms() do
-                local icon, _, active = GetShapeshiftFormInfo(i)
-                if active and icon and string.find(string.lower(icon), "catform") then
-                    isCat = true
-                    break
+            
+            
+            
+            local powerType = UnitPowerType("player")
+            if powerType == 3 then
+                isCat = true
+            end
+
+            
+            if not isCat then
+                for i = 1, GetNumShapeshiftForms() do
+                    local icon, name, active = GetShapeshiftFormInfo(i)
+                    if active then
+                        if (name and string.find(string.lower(name), "cat")) or 
+                           (icon and string.find(string.lower(icon), "cat")) then
+                            isCat = true
+                            break
+                        end
+                    end
                 end
             end
+            
             if not isCat then
                 indicator:Hide()
                 lastState = nil
@@ -468,7 +484,7 @@ loader:SetScript("OnEvent", function()
                 end
             end
         else
-            -- Fallback
+            
             behind = true
             range = (IsSpellInRange("Backstab", "target") == 1) or (IsSpellInRange("Ambush", "target") == 1)
         end
@@ -492,6 +508,7 @@ loader:SetScript("OnEvent", function()
     indicator:RegisterEvent("PLAYER_REGEN_DISABLED")
     indicator:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     indicator:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+    indicator:RegisterEvent("UNIT_DISPLAYPOWER")
 
     indicator:SetScript("OnEvent", function()
         if event == "UNIT_SPELLCAST_SUCCEEDED" then
