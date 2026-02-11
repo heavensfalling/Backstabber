@@ -1,4 +1,4 @@
-# Backstabber 
+# Backstabber 1.2.8
 ![WoW Version](https://img.shields.io/badge/WoW-1.12.1-blue?style=flat-square) ![License](https://img.shields.io/badge/License-See_Repo-orange?style=flat-square)
 
 > **Specialized positioning assistant for World of Warcraft (1.12.1).**
