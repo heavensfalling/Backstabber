@@ -1,7 +1,7 @@
 ## Interface: 11200
 
 ## Title: Backstabber
-## Notes: ur so bad bro 
+## Notes: very cool addon
 ## Author: Wristcry (dc@heavensfalling)
 ## Version: 1.2.7
 ## SavedVariables: BackstabberDB
