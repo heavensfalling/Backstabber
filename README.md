@@ -7,7 +7,7 @@
 ##  Requirements
 > [!IMPORTANT]
 > **SuperWoW & UnitXP are Required for Accuracy**
-> The standard 1.12.1 API cannot accurately detect if you are behind a mob. This addon relies on these custom modules for precise positioning.
+> The standard 1.12.1 API cannot accurately detect if you are behind a mob. This addon relies on these  modules for precise positioning.
 >
 > * [SuperWoW](https://github.com/balakethelock/SuperWoW)
 > * [UnitXP_SP3](https://codeberg.org/konaka/UnitXP_SP3)
